@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lanka Chauraha Signal Lab — Smart vs Fixed Traffic Signal</title>
+  <!-- Tailwind CSS for clean, responsive styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Space Grotesk for bold numbers/headings, Inter for clean body text -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Space Grotesk', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      background-color: #EEF2F5;
+      color: #12202C;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Subtle pulse for the live wasted-green warning badge */
+    @keyframes warnPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.88; transform: scale(1.01); }
+    }
+    .animate-warn {
+      animation: warnPulse 1.1s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-blue-100 selection:text-blue-900">
+
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="space-y-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold tracking-wide uppercase">
+        <span>HCL Jigsaw · Grade 8 Prototype</span>
+      </div>
+      <h1 class="font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
+        Lanka Chauraha Signal Lab
+      </h1>
+      <p class="text-slate-600 text-base sm:text-lg max-w-3xl">
+        Same cars, same junction. Watch why a fixed timer wastes green light on empty roads — and how our smart signal fixes it.
+      </p>
+    </header>
+
+    <!-- ==================== STEP 1: CHOOSE TRAFFIC ==================== -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-5" aria-label="Step 1: Choose traffic">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Step 1</p>
+          <h2 class="font-display text-xl font-bold text-slate-900">Choose how much traffic arrives</h2>
+        </div>
+        <!-- Playback controls -->
+        <div class="flex items-center gap-2">
+          <button id="btnPause" type="button"
+            class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-sm font-semibold transition cursor-pointer">
+            ⏸ Pause
+          </button>
+          <button id="btnReset" type="button"
+            class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-sm font-semibold transition cursor-pointer">
+            ↺ Restart
+          </button>
+        </div>
+      </div>
+
+      <!-- Preset Buttons -->
+      <div>
+        <div id="presetGroup" class="flex flex-wrap gap-2" role="group" aria-label="Traffic presets"></div>
+        <p id="presetDesc" class="mt-2 text-sm text-slate-600"></p>
+      </div>
+
+      <!-- Sliders -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-1">
+        <!-- Main Road Slider -->
+        <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80">
+          <div class="flex justify-between items-baseline mb-1">
+            <label for="sliderMain" class="text-sm font-semibold text-slate-800">Main Road</label>
+            <span id="outMain" class="font-display font-bold text-blue-700 text-base tabular-nums">600 cars/hr</span>
+          </div>
+          <input id="sliderMain" type="range" min="100" max="3600" step="50" value="600"
+            class="w-full accent-blue-700 cursor-pointer" />
+          <p class="text-xs text-slate-500 mt-1">Mirzapur Rd (North + South)</p>
+        </div>
+
+        <!-- Side Roads Slider -->
+        <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80">
+          <div class="flex justify-between items-baseline mb-1">
+            <label for="sliderSide" class="text-sm font-semibold text-slate-800">Side Roads</label>
+            <span id="outSide" class="font-display font-bold text-blue-700 text-base tabular-nums">400 cars/hr</span>
+          </div>
+          <input id="sliderSide" type="range" min="50" max="1500" step="10" value="400"
+            class="w-full accent-blue-700 cursor-pointer" />
+          <p class="text-xs text-slate-500 mt-1">BHU Gate (East) + Sunderpur (West)</p>
+        </div>
+
+        <!-- Speed Slider -->
+        <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80">
+          <div class="flex justify-between items-baseline mb-1">
+            <label for="sliderSpeed" class="text-sm font-semibold text-slate-800">Animation Speed</label>
+            <span id="outSpeed" class="font-display font-bold text-slate-700 text-base tabular-nums">8×</span>
+          </div>
+          <input id="sliderSpeed" type="range" min="1" max="25" step="1" value="8"
+            class="w-full accent-slate-700 cursor-pointer" />
+          <p class="text-xs text-slate-500 mt-1">Speed up or slow down the live cars</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 2: INSTANT 1-HOUR RESULTS ==================== -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4" aria-label="Step 2: 1-hour results" aria-live="polite">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Step 2</p>
+        <h2 class="font-display text-xl font-bold text-slate-900">1-Hour Test Results (Exact Same Cars)</h2>
+        <p class="text-sm text-slate-600 mt-0.5">We ran 1 full hour of traffic through both signals at once. Lower numbers are better.</p>
+      </div>
+
+      <!-- 2 Big Metric Comparison Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Metric 1: Average Wait per Car -->
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold uppercase tracking-wide text-slate-600">Average Wait per Car</h3>
+            <span id="badgeWaitDiff" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 tabular-nums">--</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white rounded-lg p-3 border border-amber-200">
+              <div class="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block"></span>
+                Fixed Timer
+              </div>
+              <div id="resFixedWait" class="font-display text-2xl sm:text-3xl font-bold text-slate-900 mt-1 tabular-nums">--</div>
+            </div>
+            <div class="bg-white rounded-lg p-3 border border-blue-200">
+              <div class="flex items-center gap-1.5 text-xs font-semibold text-blue-800">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
+                Smart Signal
+              </div>
+              <div id="resSmartWait" class="font-display text-2xl sm:text-3xl font-bold text-blue-700 mt-1 tabular-nums">--</div>
+            </div>
+          </div>
+          <!-- Visual comparison bars -->
+          <div class="space-y-1.5 pt-1">
+            <div class="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden">
+              <div id="barFixedWait" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden">
+              <div id="barSmartWait" class="h-full bg-blue-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric 2: Wasted Green Light on Empty Roads -->
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold uppercase tracking-wide text-slate-600">Wasted Green on Empty Roads</h3>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">Per Hour</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white rounded-lg p-3 border border-rose-200">
+              <div class="flex items-center gap-1.5 text-xs font-semibold text-rose-800">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block"></span>
+                Fixed Timer
+              </div>
+              <div id="resFixedWaste" class="font-display text-2xl sm:text-3xl font-bold text-rose-700 mt-1 tabular-nums">--</div>
+            </div>
+            <div class="bg-white rounded-lg p-3 border border-emerald-200">
+              <div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span>
+                Smart Signal
+              </div>
+              <div id="resSmartWaste" class="font-display text-2xl sm:text-3xl font-bold text-emerald-700 mt-1 tabular-nums">--</div>
+            </div>
+          </div>
+          <!-- Visual comparison bars -->
+          <div class="space-y-1.5 pt-1">
+            <div class="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden">
+              <div id="barFixedWaste" class="h-full bg-rose-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="h-2.5 w-full bg-slate-200 rounded-full overflow-hidden">
+              <div id="barSmartWaste" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plain-English Verdict Banner -->
+      <div id="verdictBox" class="rounded-xl bg-blue-50 border border-blue-200 p-4 text-slate-900 text-base sm:text-lg leading-relaxed">
+        Calculating 1-hour results…
+      </div>
+    </section>
+
+    <!-- ==================== STEP 3: LIVE SIDE-BY-SIDE ANIMATION ==================== -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4" aria-label="Step 3: Watch it happen live">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Step 3</p>
+        <h2 class="font-display text-xl font-bold text-slate-900">Watch It Happen Live</h2>
+        <p class="text-sm text-slate-600 mt-0.5">
+          Watch the <strong>Fixed Timer</strong> on the left stay green even when a road has <strong>0 cars</strong> — while the <strong>Smart Signal</strong> on the right switches right away.
+        </p>
+      </div>
+
+      <!-- Side-by-Side Junctions -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- Left: Fixed Timer -->
+        <div class="flex flex-col space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-amber-600 inline-block"></span>
+              Fixed Timer <span class="text-sm font-normal text-slate-500">(Today)</span>
+            </h3>
+            <span id="liveFixedWaste" class="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-full tabular-nums">
+              Wasted: 0 s
+            </span>
+          </div>
+
+          <!-- Live Status / Warning Banner -->
+          <div id="fixedBanner" class="min-h-[44px] flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-sm font-semibold text-slate-800 transition-colors">
+            <span id="fixedStatusText">Main Road: GREEN</span>
+            <span id="fixedTimerText" class="tabular-nums text-slate-600">90 s left</span>
+          </div>
+
+          <!-- Canvas -->
+          <div class="w-full aspect-square rounded-xl overflow-hidden border border-slate-200 bg-[#E2E9EE]">
+            <canvas id="cvFixed" class="w-full h-full block" aria-label="Fixed timer junction animation"></canvas>
+          </div>
+          <p class="text-xs text-slate-500">Always gives 90 s to Main Road and 30 s to Side Roads — even if the road is empty.</p>
+        </div>
+
+        <!-- Right: Smart Signal -->
+        <div class="flex flex-col space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
+              Smart Signal <span class="text-sm font-normal text-slate-500">(Ours)</span>
+            </h3>
+            <span id="liveSmartSwitches" class="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full tabular-nums">
+              Early switches: 0
+            </span>
+          </div>
+
+          <!-- Live Status / Early Switch Banner -->
+          <div id="smartBanner" class="min-h-[44px] flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-sm font-semibold text-slate-800 transition-colors">
+            <span id="smartStatusText">Main Road: GREEN</span>
+            <span id="smartTimerText" class="tabular-nums text-slate-600">Watching cars…</span>
+          </div>
+
+          <!-- Canvas -->
+          <div class="w-full aspect-square rounded-xl overflow-hidden border border-slate-200 bg-[#E2E9EE]">
+            <canvas id="cvSmart" class="w-full h-full block" aria-label="Smart signal junction animation"></canvas>
+          </div>
+          <p class="text-xs text-slate-500">Checks if cars are waiting. As soon as the green road is empty, it switches to the other road.</p>
+        </div>
+      </div>
+
+      <!-- Simple Color Key -->
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 border-t border-slate-200 text-xs sm:text-sm text-slate-700 font-medium">
+        <span class="flex items-center gap-1.5">
+          <span class="w-4 h-2.5 rounded-sm bg-[#E0922B] inline-block"></span> Waiting car
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-4 h-2.5 rounded-sm bg-[#2FA866] inline-block"></span> Crossing car
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-5 h-1.5 rounded bg-[#2FB36B] inline-block"></span> Green stop line
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-5 h-1.5 rounded bg-[#F2C230] inline-block"></span> Yellow stop line
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-5 h-1.5 rounded bg-[#E5484D] inline-block"></span> Red stop line
+        </span>
+        <span class="text-slate-500 ml-auto">Indian left-hand driving</span>
+      </div>
+    </section>
+
+    <!-- ==================== STEP 4: HOW OUR SMART SIGNAL WORKS ==================== -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4" aria-label="Step 4: How our smart signal works">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-wider text-blue-700">Step 4</p>
+        <h2 class="font-display text-xl font-bold text-slate-900">How Our Smart Signal Works</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-1.5">
+          <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 text-blue-800 font-display font-bold text-base">1</div>
+          <h3 class="font-display text-base font-bold text-slate-900">1. Check</h3>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            Sensors at the stop line check if cars are waiting on each road.
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-1.5">
+          <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-display font-bold text-base">2</div>
+          <h3 class="font-display text-base font-bold text-slate-900">2. Switch Early</h3>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            The moment the green road is empty (after a 2 s safety gap), it turns red and gives green to the waiting road — no wasted time or petrol.
+          </p>
+        </div>
+
+        <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-1.5">
+          <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-amber-100 text-amber-800 font-display font-bold text-base">3</div>
+          <h3 class="font-display text-base font-bold text-slate-900">3. Stay Safe</h3>
+          <p class="text-sm text-slate-600 leading-relaxed">
+            Always uses 3 s yellow + 2 s all-red before switching, and caps green at 90 s so no road is ever stuck waiting forever.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ==================== SIMULATION ENGINE & UI SCRIPT ==================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      // ----- CONSTANTS & CONFIGURATION -----
+      const DT = 0.25; // Simulation time step in seconds
+      const ROAD_NAMES = [
+        'Mirzapur Rd (S)', // 0: Main South -> North
+        'Mirzapur Rd (N)', // 1: Main North -> South
+        'BHU Gate (E)',    // 2: Side East -> West
+        'Sunderpur (W)'    // 3: Side West -> East
+      ];
+      // Traffic split from Lanka Chauraha 9:00-9:10 AM count (47%/53% on Main, 63%/37% on Side)
+      const SPLIT = [0.47, 0.53, 0.63, 0.37];
+
+      // Preset scenarios (Default: Empty Road Waste Demo)
+      const PRESETS = [
+        {
+          name: 'Empty Road Waste (Demo)',
+          main: 600,
+          side: 400,
+          desc: 'Best for the jury: clearly shows the fixed timer staying green on empty roads while cars pile up on the other side.'
+        },
+        {
+          name: 'Normal Peak (Lanka Chauraha)',
+          main: 1844,
+          side: 360,
+          desc: 'Real 9:00–9:10 AM counts from Lanka Chauraha outside BHU Main Gate, scaled to 1 hour.'
+        },
+        {
+          name: 'BHU College Rush',
+          main: 1200,
+          side: 1000,
+          desc: 'Heavy rush from the BHU Gate when classes end.'
+        },
+        {
+          name: 'Night Traffic',
+          main: 250,
+          side: 120,
+          desc: 'Light late-night traffic where fixed timers waste the most green light.'
+        }
+      ];
+
+      // Deterministic PRNG (Mulberry32) so Fixed & Smart get 100% identical car arrivals
+      function makeRng(seed) {
+        let s = seed >>> 0;
+        return function () {
+          s = (s + 0x6D2B79F5) >>> 0;
+          let t = s;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      // ----- SIGNAL CONTROLLER CLASS -----
+      // Phases:
+      // 0 = Main GREEN, 1 = Main YELLOW (3s), 2 = All-RED (2s)
+      // 3 = Side GREEN, 4 = Side YELLOW (3s), 5 = All-RED (2s)
+      class Signal {
+        constructor(kind) {
+          this.kind = kind; // 'fixed' or 'smart'
+          this.q = [[], [], [], []]; // Arrival timestamps of waiting cars per road
+          this.qh = [0, 0, 0, 0];    // Queue head index per road
+          this.phase = 0;
+          this.inPhase = 0;
+          this.t = 0;
+
+          // Signal timing parameters
+          this.fixedMain = 90;
+          this.fixedSide = 30;
+          this.yellowDur = 3;
+          this.allRedDur = 2;
+          this.smartMinGreen = 6;
+          this.smartMaxGreen = 90;
+          this.emptyGapLimit = 2.0; // Switch after 2 s of empty green road
+
+          // Clearing rate: 1 car every 2.0 s after 1.5 s start-up delay
+          this.headway = 2.0;
+          this.startupDelay = 1.5;
+          this.clearTimer = [0, 0, 0, 0];
+
+          // Metrics
+          this.sumWait = 0;
+          this.cleared = 0;
+          this.wastedGreen = 0;    // Seconds spent green on 0 cars while red road has >= 1 car
+          this.isWastingNow = false;
+          this.emptyStreak = 0;    // How long current green road has been empty while other waits
+          this.earlySwitches = 0;  // Count of early switches made by smart signal
+          this.earlyNoticeTimer = 0; // UI badge timer for "Road empty — switching early!"
+
+          // Crossing cars for animation
+          this.movers = [];
+
+          this.armGreen();
+        }
+
+        qlen(r) {
+          return this.q[r].length - this.qh[r];
+        }
+
+        armGreen() {
+          if (this.phase === 0) {
+            this.clearTimer[0] = this.startupDelay;
+            this.clearTimer[1] = this.startupDelay;
+            this.emptyStreak = 0;
+          } else if (this.phase === 3) {
+            this.clearTimer[2] = this.startupDelay;
+            this.clearTimer[3] = this.startupDelay;
+            this.emptyStreak = 0;
+          }
+        }
+
+        isGreen(r) {
+          return r < 2 ? this.phase === 0 : this.phase === 3;
+        }
+
+        light(r) {
+          const g = r < 2 ? 0 : 3;
+          if (this.phase === g) return 'g';
+          if (this.phase === g + 1) return 'y';
+          return 'r';
+        }
+
+        currentPhaseDuration() {
+          if (this.phase === 1 || this.phase === 4) return this.yellowDur;
+          if (this.phase === 2 || this.phase === 5) return this.allRedDur;
+          if (this.kind === 'fixed') {
+            return this.phase === 0 ? this.fixedMain : this.fixedSide;
+          }
+          return this.smartMaxGreen;
+        }
+
+        step(dt, arrivals) {
+          this.t += dt;
+          if (this.earlyNoticeTimer > 0) {
+            this.earlyNoticeTimer = Math.max(0, this.earlyNoticeTimer - dt);
+          }
+
+          // 1. Add arriving cars to queues
+          for (let r = 0; r < 4; r++) {
+            if (arrivals[r]) {
+              this.q[r].push(this.t);
+            }
+          }
+
+          // 2. Advance phase timer
+          this.inPhase += dt;
+
+          const mainQ = this.qlen(0) + this.qlen(1);
+          const sideQ = this.qlen(2) + this.qlen(3);
+
+          // Check if green road is empty while red road has cars waiting
+          const inGreenPhase = (this.phase === 0 || this.phase === 3);
+          const greenQ = this.phase === 0 ? mainQ : sideQ;
+          const redQ = this.phase === 0 ? sideQ : mainQ;
+
+          if (inGreenPhase && greenQ === 0 && redQ > 0) {
+            this.wastedGreen += dt;
+            this.isWastingNow = true;
+            this.emptyStreak += dt;
+          } else {
+            this.isWastingNow = false;
+            this.emptyStreak = 0;
+          }
+
+          // 3. Decide whether to switch phase
+          let shouldSwitch = false;
+          let switchedEarly = false;
+
+          if (this.phase === 1 || this.phase === 4) {
+            if (this.inPhase >= this.yellowDur) shouldSwitch = true;
+          } else if (this.phase === 2 || this.phase === 5) {
+            if (this.inPhase >= this.allRedDur) shouldSwitch = true;
+          } else if (this.kind === 'fixed') {
+            // Fixed timer NEVER checks if road is empty
+            const dur = this.phase === 0 ? this.fixedMain : this.fixedSide;
+            if (this.inPhase >= dur) shouldSwitch = true;
+          } else {
+            // SMART SIGNAL: Empty-Road Early Switch
+            if (greenQ === 0 && redQ > 0 && this.emptyStreak >= this.emptyGapLimit) {
+              // Road is empty for 2 s and other side is waiting -> switch immediately!
+              shouldSwitch = true;
+              switchedEarly = true;
+            } else if (this.inPhase >= this.smartMaxGreen && redQ > 0) {
+              // Hit 90 s max green cap while other road is waiting -> switch for fairness
+              shouldSwitch = true;
+            }
+          }
+
+          if (shouldSwitch) {
+            this.inPhase = 0;
+            this.phase = (this.phase + 1) % 6;
+            if (switchedEarly) {
+              this.earlySwitches++;
+              this.earlyNoticeTimer = 4.5; // Show green badge briefly in UI
+            }
+            this.armGreen();
+          }
+
+          // 4. Clear cars on green roads
+          for (let r = 0; r < 4; r++) {
+            if (!this.isGreen(r)) continue;
+            this.clearTimer[r] -= dt;
+            while (this.clearTimer[r] <= 0 && this.qlen(r) > 0) {
+              const arrivedAt = this.q[r][this.qh[r]++];
+              this.sumWait += (this.t - arrivedAt);
+              this.cleared++;
+              this.movers.push({ r, t0: this.t });
+              this.clearTimer[r] += this.headway;
+            }
+            if (this.clearTimer[r] < 0) this.clearTimer[r] = 0;
+            // Compact array occasionally to keep memory tiny
+            if (this.qh[r] > 512) {
+              this.q[r] = this.q[r].slice(this.qh[r]);
+              this.qh[r] = 0;
+            }
+          }
+
+          // Remove finished crossing cars
+          if (this.movers.length && this.t - this.movers[0].t0 > 3.5) {
+            this.movers = this.movers.filter(m => this.t - m.t0 <= 3.5);
+          }
+        }
+
+        totalCars() {
+          return this.cleared + this.qlen(0) + this.qlen(1) + this.qlen(2) + this.qlen(3);
+        }
+
+        avgWait() {
+          let totalW = this.sumWait;
+          let count = this.cleared;
+          for (let r = 0; r < 4; r++) {
+            for (let i = this.qh[r]; i < this.q[r].length; i++) {
+              totalW += (this.t - this.q[r][i]);
+              count++;
+            }
+          }
+          return count > 0 ? totalW / count : 0;
+        }
+      }
+
+      // ----- WORLD: RUNS BOTH SIGNALS ON IDENTICAL TRAFFIC -----
+      class World {
+        constructor(mainPerHr, sidePerHr, seed) {
+          // Convert cars/hr to arrival probability per second for each of the 4 roads
+          this.ratePerSec = [
+            (mainPerHr * SPLIT[0]) / 3600,
+            (mainPerHr * SPLIT[1]) / 3600,
+            (sidePerHr * SPLIT[2]) / 3600,
+            (sidePerHr * SPLIT[3]) / 3600
+          ];
+          this.rng = makeRng(seed);
+          this.t = 0;
+          this.fixed = new Signal('fixed');
+          this.smart = new Signal('smart');
+        }
+
+        step(dt) {
+          this.t += dt;
+          const arrivals = [0, 0, 0, 0];
+          for (let r = 0; r < 4; r++) {
+            if (this.rng() < this.ratePerSec[r] * dt) {
+              arrivals[r] = 1;
+            }
+          }
+          this.fixed.step(dt, arrivals);
+          this.smart.step(dt, arrivals);
+        }
+      }
+
+      // ----- FORMATTING HELPERS -----
+      const $ = id => document.getElementById(id);
+
+      function fmtNum(n) {
+        return Math.round(n).toLocaleString('en-IN');
+      }
+
+      function fmtTime(sec) {
+        const s = Math.round(sec);
+        if (s < 60) return `${s} s`;
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        if (m < 10) return `${m} min ${String(rem).padStart(2, '0')} s`;
+        return `${m} min`;
+      }
+
+      function fmtWaste(sec) {
+        const s = Math.round(sec);
+        if (s < 60) return `${s} s`;
+        const m = Math.round(s / 60);
+        return `${m} min`;
+      }
+
+      // ----- STATE -----
+      let activePreset = 0;
+      let world = null;
+      let paused = false;
+      let resultTimeout = null;
+
+      // ----- BUILD PRESET BUTTONS -----
+      const presetGroup = $('presetGroup');
+      PRESETS.forEach((p, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = p.name;
+        btn.className = 'px-3.5 py-2 rounded-xl text-sm font-semibold border transition cursor-pointer';
+        btn.addEventListener('click', () => {
+          activePreset = idx;
+          $('sliderMain').value = p.main;
+          $('sliderSide').value = p.side;
+          updatePresetUI();
+          refreshAll();
+        });
+        presetGroup.appendChild(btn);
+      });
+
+      function updatePresetUI() {
+        [...presetGroup.children].forEach((btn, idx) => {
+          const active = idx === activePreset;
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+          if (active) {
+            btn.className = 'px-3.5 py-2 rounded-xl text-sm font-semibold border border-blue-700 bg-blue-700 text-white shadow-sm transition cursor-pointer';
+          } else {
+            btn.className = 'px-3.5 py-2 rounded-xl text-sm font-semibold border border-slate-300 bg-white text-slate-800 hover:border-blue-500 transition cursor-pointer';
+          }
+        });
+        $('presetDesc').textContent = activePreset >= 0
+          ? PRESETS[activePreset].desc
+          : 'Custom traffic: you adjusted the sliders.';
+      }
+
+      function updateSliderLabels() {
+        $('outMain').textContent = `${fmtNum($('sliderMain').value)} cars/hr`;
+        $('outSide').textContent = `${fmtNum($('sliderSide').value)} cars/hr`;
+        $('outSpeed').textContent = `${$('sliderSpeed').value}×`;
+      }
+
+      // ----- INSTANT 1-HOUR SIMULATION FOR STEP 2 -----
+      function computeOneHourResults() {
+        const main = +$('sliderMain').value;
+        const side = +$('sliderSide').value;
+        const testWorld = new World(main, side, 42);
+        // 3600 seconds at 0.5 s step = 7200 steps (runs in ~5 ms)
+        for (let i = 0; i < 7200; i++) {
+          testWorld.step(0.5);
+        }
+
+        const fWait = testWorld.fixed.avgWait();
+        const sWait = testWorld.smart.avgWait();
+        const fWaste = testWorld.fixed.wastedGreen;
+        const sWaste = testWorld.smart.wastedGreen;
+        const totalCars = testWorld.fixed.totalCars();
+
+        // Update numbers
+        $('resFixedWait').textContent = fmtTime(fWait);
+        $('resSmartWait').textContent = fmtTime(sWait);
+        $('resFixedWaste').textContent = fmtWaste(fWaste);
+        $('resSmartWaste').textContent = fmtWaste(sWaste);
+
+        // Update bars
+        const maxW = Math.max(fWait, sWait, 1);
+        $('barFixedWait').style.width = `${(fWait / maxW) * 100}%`;
+        $('barSmartWait').style.width = `${(sWait / maxW) * 100}%`;
+
+        const maxWaste = Math.max(fWaste, sWaste, 1);
+        $('barFixedWaste').style.width = `${(fWaste / maxWaste) * 100}%`;
+        $('barSmartWaste').style.width = `${(sWaste / maxWaste) * 100}%`;
+
+        // Wait % badge
+        const pctLess = fWait > 0 ? Math.round(((fWait - sWait) / fWait) * 100) : 0;
+        const badge = $('badgeWaitDiff');
+        if (pctLess >= 5) {
+          badge.textContent = `${pctLess}% less waiting`;
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 tabular-nums';
+        } else if (pctLess > -5) {
+          badge.textContent = 'About the same';
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700 tabular-nums';
+        } else {
+          badge.textContent = `${Math.abs(pctLess)}% more`;
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 tabular-nums';
+        }
+
+        // Plain-English Verdict Banner
+        const wasteSavedSec = Math.max(0, fWaste - sWaste);
+        const hoursSaved = Math.max(0, ((fWait - sWait) * totalCars) / 3600);
+        const verdictBox = $('verdictBox');
+
+        if (pctLess >= 5) {
+          verdictBox.className = 'rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-slate-900 text-base sm:text-lg leading-relaxed';
+          verdictBox.innerHTML =
+            `<strong class="font-display text-emerald-900">Our smart signal cuts waiting by ${pctLess}%</strong> ` +
+            `(from <strong>${fmtTime(fWait)}</strong> down to <strong>${fmtTime(sWait)}</strong>) and stops ` +
+            `<strong>${fmtWaste(wasteSavedSec)}</strong> of wasted green light every hour. ` +
+            `That saves about <strong>${hoursSaved.toFixed(1)} hours</strong> of idling and petrol across ${fmtNum(totalCars)} cars!`;
+        } else {
+          verdictBox.className = 'rounded-xl bg-blue-50 border border-blue-200 p-4 text-slate-900 text-base sm:text-lg leading-relaxed';
+          verdictBox.innerHTML =
+            `<strong class="font-display text-blue-900">Both roads are very busy right now.</strong> ` +
+            `When every road is completely full, there are no empty roads to skip, so both signals work about the same.`;
+        }
+      }
+
+      function restartLiveWorld() {
+        const main = +$('sliderMain').value;
+        const side = +$('sliderSide').value;
+        world = new World(main, side, 42);
+      }
+
+      function refreshAll() {
+        updateSliderLabels();
+        restartLiveWorld();
+        clearTimeout(resultTimeout);
+        resultTimeout = setTimeout(computeOneHourResults, 60);
+      }
+
+      // ----- EVENT LISTENERS -----
+      $('sliderMain').addEventListener('input', () => {
+        activePreset = -1;
+        updatePresetUI();
+        refreshAll();
+      });
+
+      $('sliderSide').addEventListener('input', () => {
+        activePreset = -1;
+        updatePresetUI();
+        refreshAll();
+      });
+
+      $('sliderSpeed').addEventListener('input', updateSliderLabels);
+
+      $('btnPause').addEventListener('click', () => {
+        paused = !paused;
+        $('btnPause').textContent = paused ? '▶ Resume' : '⏸ Pause';
+      });
+
+      $('btnReset').addEventListener('click', () => {
+        restartLiveWorld();
+        if (paused) {
+          paused = false;
+          $('btnPause').textContent = '⏸ Pause';
+        }
+      });
+
+      // ----- CANVAS DRAWING -----
+      const DIRS = [
+        [0, -1], // 0: South -> North
+        [0, 1],  // 1: North -> South
+        [-1, 0], // 2: East -> West
+        [1, 0]   // 3: West -> East
+      ];
+      const LIGHT_COLORS = { g: '#2FB36B', y: '#F2C230', r: '#E5484D' };
+
+      function sizeCanvas(cv) {
+        const dpr = window.devicePixelRatio || 1;
+        const S = cv.clientWidth;
+        if (S && cv.width !== Math.round(S * dpr)) {
+          cv.width = Math.round(S * dpr);
+          cv.height = Math.round(S * dpr);
+        }
+        return { S, dpr };
+      }
+
+      function drawRoundedRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+        else ctx.rect(x, y, w, h);
+        ctx.fill();
+      }
+
+      function lightWord(l) {
+        return l === 'g' ? 'GREEN' : l === 'y' ? 'YELLOW' : 'RED';
+      }
+
+      function drawRoadPill(ctx, S, x, y, align, name, state, count, isEmptyGreen) {
+        const fs = Math.max(10.5, S * 0.029);
+        ctx.font = `600 ${fs}px Inter, system-ui, sans-serif`;
+        const line1 = name;
+        const line2 = `${lightWord(state)} · ${count} waiting`;
+        const w = Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width + fs) + fs * 1.6;
+        const h = fs * 3.05;
+        const x0 = align === 'right' ? x - w : x;
+
+        // Pill background (highlight softly in red if wasting green on 0 cars)
+        ctx.fillStyle = isEmptyGreen ? '#FFF1F2' : '#FFFFFF';
+        ctx.strokeStyle = isEmptyGreen ? '#E11D48' : '#CBD5E1';
+        ctx.lineWidth = isEmptyGreen ? 1.8 : 1;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x0, y, w, h, 7);
+        else ctx.rect(x0, y, w, h);
+        ctx.fill();
+        ctx.stroke();
+
+        // Road name
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#0F172A';
+        ctx.font = `700 ${fs}px Inter, system-ui, sans-serif`;
+        ctx.fillText(line1, x0 + fs * 0.75, y + fs * 1.15);
+
+        // Status dot
+        ctx.fillStyle = LIGHT_COLORS[state];
+        ctx.beginPath();
+        ctx.arc(x0 + fs * 1.05, y + fs * 2.15, fs * 0.36, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Light + count
+        ctx.fillStyle = isEmptyGreen ? '#BE123C' : '#334155';
+        ctx.font = `600 ${fs * 0.92}px Inter, system-ui, sans-serif`;
+        ctx.fillText(line2, x0 + fs * 1.7, y + fs * 2.45);
+      }
+
+      function drawJunction(cv, sig) {
+        const { S, dpr } = sizeCanvas(cv);
+        if (!S) return;
+        const ctx = cv.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // Background grass
+        ctx.fillStyle = '#E2E9EE';
+        ctx.fillRect(0, 0, S, S);
+
+        const c = S / 2;
+        const hw = S * 0.088; // Half road width
+
+        // Asphalt roads
+        ctx.fillStyle = '#3A4651';
+        ctx.fillRect(c - hw, 0, 2 * hw, S);
+        ctx.fillRect(0, c - hw, S, 2 * hw);
+
+        // Center dashed lane dividers
+        ctx.strokeStyle = '#EDF1F4';
+        ctx.lineWidth = 1.3;
+        ctx.globalAlpha = 0.55;
+        ctx.setLineDash([6, 8]);
+        ctx.beginPath();
+        ctx.moveTo(c, 0); ctx.lineTo(c, c - hw - 2);
+        ctx.moveTo(c, c + hw + 2); ctx.lineTo(c, S);
+        ctx.moveTo(0, c); ctx.lineTo(c - hw - 2, c);
+        ctx.moveTo(c + hw + 2, c); ctx.lineTo(S, c);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+
+        const carL = S * 0.032;
+        const carW = S * 0.022;
+        const spacing = S * 0.042;
+        const stopDist = hw + 4;
+
+        for (let r = 0; r < 4; r++) {
+          const d = DIRS[r];
+          const rt = [-d[1], d[0]];
+          const laneOff = hw / 2;
+          // Indian left-hand traffic: incoming lane is on the driver's left
+          const lx = c - rt[0] * laneOff;
+          const ly = c - rt[1] * laneOff;
+          const st = sig.light(r);
+
+          // Colored stop line
+          ctx.strokeStyle = LIGHT_COLORS[st];
+          ctx.lineWidth = Math.max(4.5, S * 0.013);
+          ctx.lineCap = 'butt';
+          ctx.beginPath();
+          const sx = c - d[0] * stopDist;
+          const sy = c - d[1] * stopDist;
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx - rt[0] * hw, sy - rt[1] * hw);
+          ctx.stroke();
+
+          // Waiting cars (Orange)
+          const n = sig.qlen(r);
+          const edgeLimit = S / 2 - S * 0.095;
+          const maxShow = Math.max(1, Math.floor((edgeLimit - stopDist - 6) / spacing));
+          const show = Math.min(n, maxShow);
+          const vert = d[0] === 0;
+          const w = vert ? carW : carL;
+          const h = vert ? carL : carW;
+
+          ctx.fillStyle = '#E0922B';
+          for (let k = 0; k < show; k++) {
+            const dist = stopDist + 9 + k * spacing;
+            drawRoundedRect(ctx, lx - d[0] * dist - w / 2, ly - d[1] * dist - h / 2, w, h, 3);
+          }
+
+          if (n > maxShow) {
+            ctx.fillStyle = '#0F172A';
+            ctx.font = `700 ${Math.max(10, S * 0.03)}px Inter, system-ui, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText('+' + (n - maxShow), lx - d[0] * (edgeLimit + S * 0.042), ly - d[1] * (edgeLimit + S * 0.042) + 4);
+          }
+
+          // Crossing cars (Green)
+          ctx.fillStyle = '#2FA866';
+          for (const m of sig.movers) {
+            if (m.r !== r) continue;
+            const frac = (sig.t - m.t0) / 3.2;
+            if (frac >= 1) continue;
+            const dist = -stopDist - 6 + frac * (2 * stopDist + S * 0.28);
+            ctx.globalAlpha = Math.min(1, (1 - frac) * 2.2);
+            drawRoundedRect(ctx, lx + d[0] * dist - w / 2, ly + d[1] * dist - h / 2, w, h, 3);
+            ctx.globalAlpha = 1;
+          }
+        }
+
+        // Road labels with live light state and waiting count
+        const pad = S * 0.022;
+        const pillH = Math.max(10.5, S * 0.029) * 3.05;
+        const wasteFixed = sig.kind === 'fixed' && sig.isWastingNow;
+
+        drawRoadPill(ctx, S, c - hw - pad, pad, 'right', ROAD_NAMES[1], sig.light(1), sig.qlen(1), wasteFixed && sig.phase === 0);
+        drawRoadPill(ctx, S, c + hw + pad, S - pillH - pad, 'left', ROAD_NAMES[0], sig.light(0), sig.qlen(0), wasteFixed && sig.phase === 0);
+        drawRoadPill(ctx, S, pad, c + hw + pad, 'left', ROAD_NAMES[3], sig.light(3), sig.qlen(3), wasteFixed && sig.phase === 3);
+        drawRoadPill(ctx, S, S - pad, c - hw - pad - pillH, 'right', ROAD_NAMES[2], sig.light(2), sig.qlen(2), wasteFixed && sig.phase === 3);
+      }
+
+      // ----- UPDATE LIVE STATUS BANNERS -----
+      function updateLiveBanners() {
+        const fx = world.fixed;
+        const sm = world.smart;
+
+        // Fixed Timer Banner
+        $('liveFixedWaste').textContent = `Wasted: ${Math.round(fx.wastedGreen)} s`;
+        const fxBanner = $('fixedBanner');
+        const fxLeft = Math.max(0, Math.ceil(fx.currentPhaseDuration() - fx.inPhase));
+
+        if (fx.isWastingNow) {
+          fxBanner.className = 'min-h-[44px] flex items-center justify-between px-3.5 py-2 rounded-xl bg-rose-600 border border-rose-700 text-sm font-bold text-white shadow-sm animate-warn';
+          $('fixedStatusText').textContent = `⚠️ WASTING GREEN ON EMPTY ROAD!`;
+          $('fixedTimerText').textContent = `${fxLeft} s still left`;
+          $('fixedTimerText').className = 'tabular-nums text-rose-100';
+        } else {
+          fxBanner.className = 'min-h-[44px] flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-sm font-semibold text-slate-800';
+          const mainSt = fx.phase === 0 ? 'GREEN' : fx.phase === 1 ? 'YELLOW' : 'RED';
+          const sideSt = fx.phase === 3 ? 'GREEN' : fx.phase === 4 ? 'YELLOW' : 'RED';
+          $('fixedStatusText').textContent = `Main: ${mainSt} · Side: ${sideSt}`;
+          $('fixedTimerText').textContent = (fx.phase === 0 || fx.phase === 3) ? `${fxLeft} s left` : 'Switching…';
+          $('fixedTimerText').className = 'tabular-nums text-slate-600';
+        }
+
+        // Smart Signal Banner
+        $('liveSmartSwitches').textContent = `Early switches: ${sm.earlySwitches}`;
+        const smBanner = $('smartBanner');
+
+        if (sm.earlyNoticeTimer > 0) {
+          smBanner.className = 'min-h-[44px] flex items-center justify-between px-3.5 py-2 rounded-xl bg-emerald-600 border border-emerald-700 text-sm font-bold text-white shadow-sm';
+          $('smartStatusText').textContent = `✅ Road empty — switching early!`;
+          $('smartTimerText').textContent = 'No green wasted';
+          $('smartTimerText').className = 'tabular-nums text-emerald-100';
+        } else {
+          smBanner.className = 'min-h-[44px] flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 text-sm font-semibold text-slate-800';
+          const mainSt = sm.phase === 0 ? 'GREEN' : sm.phase === 1 ? 'YELLOW' : 'RED';
+          const sideSt = sm.phase === 3 ? 'GREEN' : sm.phase === 4 ? 'YELLOW' : 'RED';
+          $('smartStatusText').textContent = `Main: ${mainSt} · Side: ${sideSt}`;
+          $('smartTimerText').textContent = (sm.phase === 0 || sm.phase === 3) ? 'Watching cars…' : 'Switching…';
+          $('smartTimerText').className = 'tabular-nums text-slate-600';
+        }
+      }
+
+      // ----- ANIMATION LOOP -----
+      let lastTime = performance.now();
+      let accumulator = 0;
+      let uiClock = 0;
+
+      function animate(now) {
+        const dtReal = Math.min(0.1, (now - lastTime) / 1000);
+        lastTime = now;
+
+        if (!paused && world) {
+          const speed = +$('sliderSpeed').value;
+          accumulator += dtReal * speed;
+          let steps = 0;
+          while (accumulator >= DT && steps < 60) {
+            world.step(DT);
+            accumulator -= DT;
+            steps++;
+          }
+          if (steps >= 60) accumulator = 0;
+        }
+
+        if (world) {
+          drawJunction($('cvFixed'), world.fixed);
+          drawJunction($('cvSmart'), world.smart);
+          uiClock += dtReal;
+          if (uiClock >= 0.12) {
+            uiClock = 0;
+            updateLiveBanners();
+          }
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      // ----- INITIALIZE ON LOAD -----
+      window.onload = function () {
+        $('sliderMain').value = PRESETS[0].main;
+        $('sliderSide').value = PRESETS[0].side;
+        updatePresetUI();
+        updateSliderLabels();
+        restartLiveWorld();
+        computeOneHourResults();
+        requestAnimationFrame(animate);
+      };
+    })();
+  </script>
+</body>
+</html>
